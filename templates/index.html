@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATEC 보고서 생성기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <!-- marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #0a1628;
+      --bg-card:    #0d1f3c;
+      --bg-input:   #0f2545;
+      --accent1:    #00c6ff;
+      --accent2:    #0072ff;
+      --accent3:    #38bdf8;
+      --text-main:  #e8f4fd;
+      --text-muted: #7ba7c4;
+      --border:     #1a3a5c;
+      --success:    #22d3ee;
+      --glow:       rgba(0, 198, 255, 0.18);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 15% 10%, rgba(0,114,255,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 80%, rgba(0,198,255,0.10) 0%, transparent 55%);
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #061020 0%, #0a1e3d 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent2), var(--accent1));
+      color: #fff;
+      font-weight: 700; font-size: 0.85rem; letter-spacing: 0.12em;
+      padding: 5px 12px; border-radius: 6px;
+      box-shadow: 0 0 16px rgba(0,198,255,0.35);
+    }
+    .logo-text {
+      font-size: 1rem; font-weight: 500; color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .header-tag {
+      font-size: 0.75rem; color: var(--accent3);
+      background: rgba(56,189,248,0.08);
+      border: 1px solid rgba(56,189,248,0.2);
+      padding: 4px 10px; border-radius: 20px;
+    }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1100px; margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 1.75rem;
+      align-items: start;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2.5rem 1rem 1rem;
+    }
+    .hero h1 {
+      font-size: 2rem; font-weight: 700;
+      background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.3; margin-bottom: 0.6rem;
+    }
+    .hero p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,198,255,0.04);
+    }
+    .card-title {
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em;
+      color: var(--accent1); text-transform: uppercase;
+      margin-bottom: 1.4rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title i { font-size: 0.85rem; }
+
+    /* ── Form ── */
+    .field { margin-bottom: 1.2rem; }
+    label {
+      display: block;
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--text-muted); letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    label span.req { color: var(--accent1); margin-left: 2px; }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      resize: vertical;
+    }
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent1);
+      box-shadow: 0 0 0 3px rgba(0,198,255,0.12);
+    }
+    input::placeholder, textarea::placeholder { color: #3d6180; }
+    select option { background: var(--bg-card); }
+
+    /* Style Selector */
+    .style-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    }
+    .style-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 0.8rem; font-weight: 500;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .style-btn i { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+    .style-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+    .style-btn.active {
+      border-color: var(--accent1);
+      background: rgba(0,198,255,0.08);
+      color: var(--accent1);
+      box-shadow: 0 0 12px rgba(0,198,255,0.15);
+    }
+
+    /* ── Generate Button ── */
+    .btn-generate {
+      width: 100%; margin-top: 0.5rem;
+      background: linear-gradient(135deg, var(--accent2), var(--accent1));
+      border: none; border-radius: 12px;
+      color: #fff; font-family: inherit;
+      font-size: 0.95rem; font-weight: 600;
+      padding: 13px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(0,114,255,0.35);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-generate:hover:not(:disabled) {
+      opacity: 0.9; transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(0,198,255,0.45);
+    }
+    .btn-generate:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* ── Result Panel ── */
+    .result-panel {
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .result-actions { display: flex; gap: 8px; }
+    .btn-action {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-family: inherit; font-size: 0.78rem;
+      padding: 6px 12px; cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-action:hover { border-color: var(--accent3); color: var(--accent3); }
+
+    .result-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem 2rem;
+      min-height: 480px;
+      font-size: 0.9rem; line-height: 1.8;
+      color: var(--text-main);
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* Markdown rendering styles */
+    .result-box h1 { font-size: 1.35rem; color: var(--accent1); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 1.2rem 0 0.8rem; }
+    .result-box h2 { font-size: 1.1rem; color: var(--accent3); margin: 1.2rem 0 0.5rem; }
+    .result-box h3 { font-size: 0.95rem; color: #90cdf4; margin: 0.9rem 0 0.4rem; }
+    .result-box p  { margin-bottom: 0.6rem; }
+    .result-box ul, .result-box ol { padding-left: 1.4rem; margin-bottom: 0.6rem; }
+    .result-box li { margin-bottom: 0.3rem; }
+    .result-box strong { color: var(--accent1); }
+    .result-box hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+    .result-box blockquote {
+      border-left: 3px solid var(--accent2);
+      padding-left: 1rem;
+      color: var(--text-muted);
+      margin: 0.6rem 0;
+    }
+    .result-box code {
+      background: rgba(0,198,255,0.08);
+      border-radius: 4px; padding: 1px 5px;
+      font-family: monospace; font-size: 0.85em;
+      color: var(--accent3);
+    }
+
+    /* Empty / Loading State */
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; min-height: 380px;
+      color: var(--text-muted); text-align: center; gap: 12px;
+    }
+    .empty-state i { font-size: 2.5rem; color: #1a3a5c; }
+    .empty-state p { font-size: 0.85rem; max-width: 240px; line-height: 1.6; }
+
+    /* Spinner */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(0,198,255,0.15);
+      border-top-color: var(--accent1);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--accent1);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 0.85rem; color: var(--accent1);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; transform: translateY(12px);
+      transition: all 0.3s;
+      pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Error */
+    .error-msg {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.85rem; color: #f87171;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-badge">ATEC</span>
+      <span class="logo-text">Report Generator</span>
+    </div>
+    <span class="header-tag"><i class="fa-solid fa-sparkles"></i> GPT-4o Powered</span>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <div class="hero">
+    <h1><i class="fa-solid fa-file-lines"></i> 에이텍 보고서 초안 생성기</h1>
+    <p>주제와 목적을 입력하면 AI가 전문 보고서 초안을 자동으로 작성합니다.</p>
+  </div>
+
+  <!-- Left: Input Form -->
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-sliders"></i> 보고서 설정</div>
+
+    <div class="field">
+      <label>보고서 제목 <span class="req">*</span></label>
+      <input type="text" id="inp-title" placeholder="예) 2025년 상반기 영업 실적 분석 보고서" />
+    </div>
+
+    <div class="field">
+      <label>보고서 목적 <span class="req">*</span></label>
+      <textarea id="inp-purpose" rows="3"
+        placeholder="예) 상반기 영업 성과를 분석하고 하반기 전략 수립의 근거 자료로 활용"></textarea>
+    </div>
+
+    <div class="field">
+      <label>대상 독자</label>
+      <input type="text" id="inp-audience" placeholder="예) 경영진, 팀장, 전 직원 등 (기본: 내부 임직원)" />
+    </div>
+
+    <div class="field">
+      <label>작성 스타일</label>
+      <div class="style-grid">
+        <button class="style-btn active" data-style="formal">
+          <i class="fa-solid fa-briefcase"></i>격식체
+        </button>
+        <button class="style-btn" data-style="concise">
+          <i class="fa-solid fa-bolt"></i>간결체
+        </button>
+        <button class="style-btn" data-style="detailed">
+          <i class="fa-solid fa-book-open"></i>상세체
+        </button>
+        <button class="style-btn" data-style="narrative">
+          <i class="fa-solid fa-pen-nib"></i>서술체
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>추가 요청사항</label>
+      <textarea id="inp-extra" rows="2"
+        placeholder="예) 경쟁사 비교 포함, 리스크 분석 강조 등"></textarea>
+    </div>
+
+    <button class="btn-generate" id="btn-gen">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      보고서 초안 생성
+    </button>
+  </div>
+
+  <!-- Right: Result Panel -->
+  <div class="result-panel">
+    <div class="card" style="padding:1.25rem 1.75rem;">
+      <div class="result-header">
+        <div class="card-title" style="margin-bottom:0;">
+          <i class="fa-solid fa-file-contract"></i> 생성된 보고서
+        </div>
+        <div class="result-actions">
+          <button class="btn-action" id="btn-copy">
+            <i class="fa-regular fa-copy"></i> 복사
+          </button>
+          <button class="btn-action" id="btn-download">
+            <i class="fa-solid fa-download"></i> 다운로드
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="result-box" id="result-box">
+        <div class="empty-state" id="empty-state">
+          <i class="fa-solid fa-file-circle-plus"></i>
+          <p>왼쪽 양식을 작성하고<br/><strong style="color:var(--accent3)">보고서 초안 생성</strong> 버튼을<br/>눌러주세요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <i class="fa-solid fa-check-circle"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+  // Style selector
+  let selectedStyle = 'formal';
+  document.querySelectorAll('.style-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedStyle = btn.dataset.style;
+    });
+  });
+
+  // Toast helper
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Raw markdown storage
+  let lastMarkdown = '';
+
+  // Generate
+  const btnGen = document.getElementById('btn-gen');
+  btnGen.addEventListener('click', async () => {
+    const title    = document.getElementById('inp-title').value.trim();
+    const purpose  = document.getElementById('inp-purpose').value.trim();
+    const audience = document.getElementById('inp-audience').value.trim();
+    const extra    = document.getElementById('inp-extra').value.trim();
+
+    if (!title || !purpose) {
+      showError('보고서 제목과 목적을 입력해 주세요.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, purpose, audience, style: selectedStyle, extra }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || '알 수 없는 오류가 발생했습니다.');
+        return;
+      }
+
+      lastMarkdown = data.report;
+      renderReport(data.report);
+    } catch (e) {
+      showError('서버 연결에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function renderReport(md) {
+    const box = document.getElementById('result-box');
+    box.innerHTML = marked.parse(md);
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('result-box');
+    box.innerHTML = `<div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i>${msg}</div>`;
+    lastMarkdown = '';
+  }
+
+  function setLoading(on) {
+    const box    = document.getElementById('result-box');
+    const btn    = document.getElementById('btn-gen');
+    btn.disabled = on;
+    if (on) {
+      box.innerHTML = `
+        <div class="empty-state">
+          <div class="spinner"></div>
+          <p>AI가 보고서를 작성하고 있습니다…<br/><span style="font-size:0.78rem;color:#2a5a7a">잠시만 기다려 주세요.</span></p>
+        </div>`;
+    }
+  }
+
+  // Copy
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    if (!lastMarkdown) { showToast('먼저 보고서를 생성해 주세요.'); return; }
+    navigator.clipboard.writeText(lastMarkdown)
+      .then(() => showToast('클립보드에 복사되었습니다.'))
+      .catch(() => showToast('복사에 실패했습니다.'));
+  });
+
+  // Download
+  document.getElementById('btn-download').addEventListener('click', () => {
+    if (!lastMarkdown) { showToast('먼저 보고서를 생성해 주세요.'); return; }
+    const title = document.getElementById('inp-title').value.trim() || 'ATEC_보고서';
+    const blob  = new Blob([lastMarkdown], { type: 'text/markdown;charset=utf-8' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href = url; a.download = `${title}.md`; a.click();
+    URL.revokeObjectURL(url);
+    showToast('파일을 다운로드했습니다.');
+  });
+</script>
+</body>
+</html>
